@@ -1,0 +1,68 @@
+#include <iostream>
+#include <cmath>
+using namespace std;
+int main()
+{
+    int option;
+    double a;
+    double b;
+    double c;
+    double d;
+    double x1;
+    double x2;
+
+    do {
+        cout << "ax^2 + bx + c" << endl;
+        cout << "Please enter a: " << endl;
+        cin >> a;
+        cout << "Please enter b: " << endl;
+        cin >> b;
+        if (a == 0 && b == 0) {
+            cout << "No solution." << endl;
+        }
+        else {
+            cout << "Please enter c: " << endl;
+            cin >> c;
+            d = pow(b, 2) - (4 * a * c);
+            if (b == sqrt(d) && a == 0 && b != 0) {
+                x1 = (-c) / b;
+                cout << "One real solution." << endl;
+                cout << x1 << " = x" << endl;
+            }
+            else if (d > 0) {
+                x1 = (-b - sqrt(d)) / (2 * a);
+                x2 = (-b + sqrt(d)) / (2 * a);
+                cout << "2 real unequal solutions." << endl;
+                cout << x1 << " = x1" << endl;
+                cout << x2 << " = x2" << endl;
+            }
+            else if (d == 0 && a != 0 && b != 0) {
+                x1 = (-b - sqrt(d)) / (2 * a);
+                cout << "2 real equal solutions." << endl;
+                cout << x1 << " = x1 = x2" << endl;
+            }
+            else if (d < 0) {
+                cout << "2 complex conjugate solutions." << endl;
+                cout << -b / (2 * a) << " + " << sqrt(-d) / (2 * a) << "j = x1" << endl;
+                cout << -b / (2 * a) << " - " << sqrt(-d) / (2 * a) << "j = x2" << endl;
+            }
+            else {
+                cout << "ERROR" << endl;
+            }
+        }
+        cout << "Run again? (1 for yes, 0 for no)" << endl;
+        cin >> option;
+        do {
+            if (option == 0) {
+                return 0;
+            }
+            else if (option == 1) {
+                cout << "Running again!\n" << endl;
+            }
+            else {
+                cout << "Enter a proper answer" << endl;
+            }
+        } while (option != 1);
+
+    } while (option != 0);
+}
