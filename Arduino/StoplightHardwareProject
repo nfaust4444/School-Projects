@@ -1,0 +1,41 @@
+int redEW = 8;
+int yellowEW = 10;
+int greenEW = 12;
+
+
+void setup() {
+pinMode (redNS, OUTPUT);
+pinMode (yellowNS, OUTPUT);
+pinMode (greenNS, OUTPUT);
+pinMode (redEW, OUTPUT);
+pinMode (yellowEW, OUTPUT);
+pinMode (greenEW, OUTPUT);
+}
+
+
+void setLights(int rNS, int yNS, int gNS, int rEW, int yEW, int gEW) {
+  digitalWrite(redNS, rNS);
+  digitalWrite(yellowNS, yNS);
+  digitalWrite(greenNS, gNS);
+  digitalWrite(redEW, rEW);
+  digitalWrite(yellowEW, yEW);
+  digitalWrite(greenEW, gEW);
+}
+
+
+void loop() {
+  setLights(LOW, LOW, HIGH,  HIGH, LOW, LOW);
+  delay(5000);
+
+
+  setLights(LOW, HIGH, LOW,  HIGH, LOW, LOW);
+  delay(5000);
+
+
+  setLights(HIGH, LOW, LOW,  LOW, LOW, HIGH);
+  delay(5000);
+
+
+  setLights(HIGH, LOW, LOW,  LOW, HIGH, LOW);
+  delay(5000);
+}
