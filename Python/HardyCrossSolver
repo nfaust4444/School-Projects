@@ -1,0 +1,141 @@
+# A water distribution pipe network consisting of one inlet, three outlets, and four closed flow loops is analyzed using the Hardy Cross iterative method. Water enters the network at node H at a flow rate of 400 L/s and exits at three demand nodes:
+# Node D: outlet demand of 100 L/s
+# Node E: outlet demand of 100 L/s
+# Node F: outlet demand of 200 L/s
+# The network consists of 10 nodes (A through J), 13 pipe sections, and 4 loop regions (LP1 through LP4) as illustrated below. All pipes carry water at standard conditions (rho = 1000 kg/m^3, g = 9.81 m/s^2)
+
+# Imports and Definitions
+import time, math
+tic = time.time()
+g = 9.81
+rho = 1000
+PI = math.pi
+ 
+# Pipe resistance R=8fL/(gpi^2D^5)
+def calc_R(f, L, D):
+    return (8.0 * f * L) / (g * PI**2 * D**5) # Darcy-Weisbach resistance coefficient 
+ 
+# Pipe data (f, L(m), D(m))
+pipes_data = {
+    'AB': (0.0223,150,0.225), 'BE': (0.0175,125,0.200),
+    'EI': (0.0223,125,0.225), 'IH': (0.0218,150,0.300),
+    'HA': (0.0218,250,0.300), 'BC': (0.0233, 75,0.225),
+    'CF': (0.0175,125,0.200), 'FE': (0.0188, 75,0.150),
+    'CD': (0.0233, 75,0.225), 'DG': (0.0175,125,0.200),
+    'GF': (0.0188, 75,0.150), 'GJ': (0.0233,125,0.225),
+    'JI': (0.0218,150,0.300),
+}
+R = {k: calc_R(*v) for k, v in pipes_data.items()}  # resistance for each pipe
+# Initial flow rates (m^3/s), + = stored direction, - = reversed
+Q = {
+    # Positive = flow in the stored direction shown in conn{}
+    # conn stores: IH as I->H, HA as H->A, GF as G->F, GJ as G->J, JI as J->I
+    # Problem table says: H->I (so IH stored I->H is reversed -> negative),
+    # H->A (HA stored H->A matches -> positive)
+    # G->F (GF stored G->F matches -> positive)
+    # J->G (GJ stored G->J is reversed -> negative)
+    # I->J (JI stored J->I is reversed -> negative)
+    'AB':  0.200, 'BE':  0.100, 'EI':  0.000, 'IH': -0.200,  # IH: H->I so negative
+    'HA':  0.200, 'BC':  0.100, 'CF':  0.000, 'FE':  0.000,  # HA: H->A so positive 
+    'CD':  0.100, 'DG':  0.000, 'GF':  0.200, 'GJ': -0.200,  # GF: G->F so positive 
+    'JI': -0.200,                                              # JI: I->J so negative
+}
+ 
+# Loop definitions (pipe_key, sign)
+# sign = + -> stored direction is clockwise
+# sign = - -> stored direction is counter-clockwise
+loops = {
+    'LP1': [('AB',+1),('BE',+1),('EI',+1),('IH',+1),('HA',+1)],
+    'LP2': [('BC',+1),('CF',+1),('FE',+1),('BE',-1)],
+    'LP3': [('CD',+1),('DG',+1),('GF',+1),('CF',-1)],
+    'LP4': [('GF',-1),('GJ',+1),('JI',+1),('EI',-1),('FE',-1)],
+}
+loop_order = ['LP1','LP2','LP3','LP4']
+ 
+# Hardy Cross iteration
+# Convergence: max net h_L < 0.01 m  AND  max dQ < 0.001 m^3/s
+tol_hL = 0.01    # head-loss tolerance (m)
+tol_dQ = 0.001   # flow-correction tolerance (m^3/s)
+iteration = 0
+while True:
+    iteration += 1
+    max_dQ = 0.0
+    for lp in loop_order:                          # process each loop in order
+        pl = loops[lp]
+        sum_hL = 0.0                               # net head loss in loop
+        sum_dhL = 0.0                              # net 2R*Q  (denominator)
+        for pk, s in pl:
+            ql = s * Q[pk]                         # flow in CW direction
+            sum_hL  += R[pk] * ql * abs(ql)        # signed head loss
+            sum_dhL += 2.0 * R[pk] * abs(ql)       # derivative term
+        dQ = -sum_hL / sum_dhL if sum_dhL else 0.0 # Hardy Cross correction
+        for pk, s in pl:
+            Q[pk] += s * dQ                        # update Q (common pipes updated once)
+        max_dQ = max(max_dQ, abs(dQ))
+    max_hL = max(
+        abs(sum(R[pk]*(s*Q[pk])*abs(s*Q[pk]) for pk,s in loops[lp]))
+        for lp in loop_order
+    )
+    if max_hL < tol_hL and max_dQ < tol_dQ:       # convergence check
+        print(f"Converged in {iteration} iterations")
+        break
+    if iteration >= 10000:
+        print("Did not converge"); break
+# toc for time bonus
+toc = time.time()
+print(f"Runtime: {toc-tic:.6f} s")
+ 
+# Final flow rates
+conn = {
+    'AB':('A','B'),'BE':('B','E'),'EI':('E','I'),'IH':('I','H'),'HA':('H','A'),
+    'BC':('B','C'),'CF':('C','F'),'FE':('F','E'),'CD':('C','D'),'DG':('D','G'),
+    'GF':('G','F'),'GJ':('G','J'),'JI':('J','I'),
+}
+print(f"\n{'Pipe':<6}  {'Q (L/s)':>10}  Direction")
+print("-"*35)
+for k in pipes_data:
+    q = Q[k]*1000
+    fn, tn = conn[k]
+    dirn = f"{fn}→{tn}" if q >= 0 else f"{tn}→{fn}"
+    print(f"{k:<6}  {abs(q):>10.4f}  {dirn}")
+ 
+# Mass balance verification
+ext_flow = {'H': 0.400, 'D': -0.100, 'E': -0.100, 'F': -0.200}
+print("\nMass Balance:")
+for node in ['A','B','C','D','E','F','G','H','I','J']:
+    net = ext_flow.get(node, 0.0)
+    for pk,(fn,tn) in conn.items():
+        if tn==node: net+=Q[pk]
+        elif fn==node: net-=Q[pk]
+    print(f"  Node {node}: {net*1000:+.4f} L/s {'OK' if abs(net)<1e-6 else 'ERROR'}")
+ 
+# PART 2
+# Fill time (P=5 kW, valve to system closed)
+P_pump = 5000.0; z = 10.0
+L_p = 30.0; D_p = 0.200; f_p = 0.025   # iron pipe to tank
+R_p = calc_R(f_p, L_p, D_p)
+V_tank = PI * 10**2 * 5                # pi*r^2*H
+Qp = 0.01; itr = 0; tol_pump = 0.001
+while True:
+    itr += 1
+    fQ  = rho*g*Qp*(z + R_p*Qp**2) - P_pump    # f(Q) = 0
+    dfQ = rho*g*(z + 3*R_p*Qp**2)              # f'(Q)
+    Qn  = Qp - fQ/dfQ                          # Newton step
+    if Qn <= 0: Qn = 0.001
+    if abs(Qn - Qp) < tol_pump: Qp = Qn; break
+    Qp = Qn
+    if itr > 10000: break
+t_fill = V_tank / Qp
+print(f"\nPart 2: Q_pump = {Qp*1000:.4f} L/s ({itr} iters)")
+print(f"        Fill time = {t_fill:.1f} s = {t_fill/3600:.4f} hr")
+ 
+# PART 3 
+# Power to supply network (Q=400 L/s)
+Q_net  = 0.400
+H_tot  = z + R_p*Q_net**2
+P_req  = rho*g*Q_net*H_tot
+print(f"\nPart 3: H_required = {H_tot:.4f} m")
+print(f"        P_required = {P_req/1000:.4f} kW")
+print(f"        5 kW {'IS' if P_req<=5000 else 'is NOT'} sufficient.")
+if P_req > 5000:
+    print(f"        Suggested power >= {math.ceil(P_req/1000)} kW")
