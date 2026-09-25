@@ -1,0 +1,24 @@
+#include <iostream>
+#include <cmath>
+using namespace std;
+int main()
+{
+// Defining variables
+double t;
+double Vdc = 10;
+double R = 10 * pow(10, 3);
+double C = 100 * pow(10, -9);
+// Prompt to input time
+cout << "Enter a time in micro-seconds: " << endl;
+cin >> t;
+// Converting t to seconds
+t = t * pow(10, -6);
+// Calculating current and voltage
+double it = ((Vdc / R) * exp((-1 * t) / (R * C))) * pow(10, -3);
+double vt = Vdc * (1 - exp((-1 * t) / (R * C)));
+// Displaying current and voltage
+cout << "Current: " << it << " mA" << endl;
+cout << "Voltage: " << vt << " V" << endl;
+//Ending program
+return 0;
+}
